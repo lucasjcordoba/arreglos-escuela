@@ -6,7 +6,7 @@ import {
   Sun, Moon, School, Plus, Pencil, Trash2, X, Check, MapPin,
   ClipboardList, Monitor, Wrench, Bath, Hammer, BrickWall, Lock,
   Lightbulb, Sparkles, Paintbrush, HardHat, PanelTop, ShowerHead,
-  Nut, Briefcase, Package, Bucket, Plug, Ladder, Settings,
+  Nut, Briefcase, Package, Container, Plug, GitBranchPlus, Settings,
   ListChecks, PartyPopper, CircleDot,
 } from 'lucide-react'
 
@@ -52,9 +52,9 @@ const ICON_OPTIONS: { key: string; icon: React.ReactNode; label: string }[] = [
   { key: 'nut', icon: <Nut size={18} />, label: 'Tornillería' },
   { key: 'briefcase', icon: <Briefcase size={18} />, label: 'Admin' },
   { key: 'package', icon: <Package size={18} />, label: 'Materiales' },
-  { key: 'bucket', icon: <Bucket size={18} />, label: 'Balde' },
+  { key: 'bucket', icon: <Container size={18} />, label: 'Balde' },
   { key: 'plug', icon: <Plug size={18} />, label: 'Conexiones' },
-  { key: 'ladder', icon: <Ladder size={18} />, label: 'Escalera' },
+  { key: 'ladder', icon: <GitBranchPlus size={18} />, label: 'Escalera' },
   { key: 'settings', icon: <Settings size={18} />, label: 'Config' },
 ]
 
@@ -76,9 +76,9 @@ function getIconByKey(key: string, size = 18) {
     nut: <Nut size={size} />,
     briefcase: <Briefcase size={size} />,
     package: <Package size={size} />,
-    bucket: <Bucket size={size} />,
+    bucket: <Container size={size} />,
     plug: <Plug size={size} />,
-    ladder: <Ladder size={size} />,
+    ladder: <GitBranchPlus size={size} />,
     settings: <Settings size={size} />,
   }
   // Fallback: si es un emoji viejo, mapearlo
