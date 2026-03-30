@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import {
   Sun, Moon, School, Plus, Pencil, Trash2, X, Check, MapPin,
   ClipboardList, Monitor, Wrench, Bath, Hammer, BrickWall, Lock,
@@ -10,10 +10,12 @@ import {
   ListChecks, PartyPopper, CircleDot,
 } from 'lucide-react'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 // ── Types ──
 interface Seccion {
@@ -221,6 +223,7 @@ const btnSecondary = "px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 da
 // ── Main Page ──
 // ══════════════════════════════════════════════
 export default function ArreglosPage() {
+  const supabase = useMemo(() => getSupabase(), [])
   const [secciones, setSecciones] = useState<Seccion[]>([])
   const [tareas, setTareas] = useState<Tarea[]>([])
   const [loading, setLoading] = useState(true)
@@ -244,7 +247,7 @@ export default function ArreglosPage() {
     if (secRes.data) setSecciones(secRes.data)
     if (tarRes.data) setTareas(tarRes.data)
     setLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
 
