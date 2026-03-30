@@ -1,0 +1,24 @@
+{
+  "name": "Arreglos de la Escuela",
+  "short_name": "Arreglos",
+  "description": "Listado de tareas de mantenimiento y reparaciones escolares",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFB",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
