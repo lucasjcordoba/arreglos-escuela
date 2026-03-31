@@ -7,7 +7,8 @@ import {
   ClipboardList, Monitor, Wrench, Bath, Hammer, BrickWall, Lock,
   Lightbulb, Sparkles, Paintbrush, HardHat, PanelTop, ShowerHead,
   Nut, Briefcase, Package, Container, Plug, GitBranchPlus, Settings,
-  ListChecks, PartyPopper, CircleDot, Globe,
+  ListChecks, PartyPopper, CircleDot, Globe, HelpCircle,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 function InstagramIcon({ size = 14, className = '' }: { size?: number; className?: string }) {
@@ -17,6 +18,223 @@ function InstagramIcon({ size = 14, className = '' }: { size?: number; className
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
     </svg>
+  )
+}
+
+// ── Tutorial Steps ──
+const TOUR_STEPS = [
+  {
+    target: null,
+    title: '¡Bienvenido! 👋',
+    text: 'Este es el sistema de Arreglos de la Escuela. Te vamos a mostrar cómo usarlo en unos simples pasos.',
+    position: 'center',
+  },
+  {
+    target: '[data-tour="progress"]',
+    title: 'Barra de progreso',
+    text: 'Acá podés ver cuántas tareas se completaron del total. Se actualiza automáticamente.',
+    position: 'bottom' ,
+  },
+  {
+    target: '[data-tour="filters"]',
+    title: 'Filtros',
+    text: 'Usá estos botones para ver todas las tareas, solo las pendientes o solo las completadas.',
+    position: 'bottom' ,
+  },
+  {
+    target: '[data-tour="new-section"]',
+    title: 'Nueva sección',
+    text: 'Tocá acá para crear una nueva categoría de arreglos (ej: Plomería, Electricidad).',
+    position: 'bottom' ,
+  },
+  {
+    target: '[data-tour="section-header"]',
+    title: 'Secciones',
+    text: 'Las tareas están agrupadas por secciones. Podés editar o eliminar cada sección con los botones de la derecha.',
+    position: 'bottom' ,
+  },
+  {
+    target: '[data-tour="task-item"]',
+    title: 'Tareas',
+    text: 'Tocá una tarea o su checkbox para marcarla como completada. Se pone verde y se tacha.',
+    position: 'bottom' ,
+  },
+  {
+    target: '[data-tour="task-actions"]',
+    title: 'Editar / Eliminar',
+    text: 'Cada tarea tiene botones para editarla o eliminarla.',
+    position: 'left' ,
+  },
+  {
+    target: '[data-tour="add-task"]',
+    title: 'Agregar tarea',
+    text: 'Tocá acá para agregar una nueva tarea a esta sección.',
+    position: 'top' ,
+  },
+  {
+    target: '[data-tour="theme-toggle"]',
+    title: 'Tema claro / oscuro',
+    text: 'Cambiá entre modo claro y oscuro tocando este botón.',
+    position: 'bottom' ,
+  },
+  {
+    target: null,
+    title: '¡Listo! ✅',
+    text: 'Ya sabés usar la app. Todos los cambios se sincronizan en tiempo real entre dispositivos. Si necesitás ver este tutorial de nuevo, tocá el botón "?" en el header.',
+    position: 'center' ,
+  },
+]
+
+function Tutorial({ active, onClose }: { active: boolean; onClose: () => void }) {
+  const [step, setStep] = useState(0)
+  const [rect, setRect] = useState<DOMRect | null>(null)
+
+  useEffect(() => {
+    if (!active) { setStep(0); return }
+    const s = TOUR_STEPS[step]
+    if (!s.target) { setRect(null); return }
+    const el = document.querySelector(s.target)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => setRect(el.getBoundingClientRect()), 300)
+    } else {
+      setRect(null)
+    }
+  }, [active, step])
+
+  // Recalcular al resize/scroll
+  useEffect(() => {
+    if (!active) return
+    const recalc = () => {
+      const s = TOUR_STEPS[step]
+      if (!s.target) return
+      const el = document.querySelector(s.target)
+      if (el) setRect(el.getBoundingClientRect())
+    }
+    window.addEventListener('resize', recalc)
+    window.addEventListener('scroll', recalc)
+    return () => { window.removeEventListener('resize', recalc); window.removeEventListener('scroll', recalc) }
+  }, [active, step])
+
+  if (!active) return null
+
+  const current = TOUR_STEPS[step]
+  const isFirst = step === 0
+  const isLast = step === TOUR_STEPS.length - 1
+  const isCenter = current.position === 'center'
+
+  // Calcular posición del tooltip
+  let tooltipStyle: React.CSSProperties = {}
+  if (rect && !isCenter) {
+    const pad = 12
+    const tw = Math.min(320, window.innerWidth - 32)
+    switch (current.position) {
+      case 'bottom':
+        tooltipStyle = { top: rect.bottom + pad, left: Math.max(16, Math.min(rect.left + rect.width / 2 - tw / 2, window.innerWidth - tw - 16)) }
+        break
+      case 'top':
+        tooltipStyle = { top: rect.top - pad, left: Math.max(16, Math.min(rect.left + rect.width / 2 - tw / 2, window.innerWidth - tw - 16)), transform: 'translateY(-100%)' }
+        break
+      case 'left':
+        tooltipStyle = { top: rect.top + rect.height / 2, left: Math.max(16, rect.left - tw - pad), transform: 'translateY(-50%)' }
+        break
+      default:
+        break
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100]">
+      {/* Overlay con hueco */}
+      <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+        <defs>
+          <mask id="tour-mask">
+            <rect width="100%" height="100%" fill="white" />
+            {rect && (
+              <rect
+                x={rect.left - 6} y={rect.top - 6}
+                width={rect.width + 12} height={rect.height + 12}
+                rx={12} fill="black"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#tour-mask)" />
+      </svg>
+
+      {/* Borde highlight */}
+      {rect && (
+        <div
+          className="absolute border-2 border-indigo-400 rounded-xl pointer-events-none animate-pulse"
+          style={{ top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 }}
+        />
+      )}
+
+      {/* Click blocker */}
+      <div className="absolute inset-0" onClick={(e) => e.stopPropagation()} />
+
+      {/* Tooltip */}
+      <div
+        className={`absolute z-10 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 w-[320px] max-w-[calc(100vw-32px)] ${
+          isCenter ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
+        }`}
+        style={isCenter ? {} : { position: 'fixed', ...tooltipStyle }}
+      >
+        {/* Step indicator */}
+        <div className="flex items-center gap-1.5 mb-3">
+          {TOUR_STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i === step ? 'w-6 bg-indigo-500' : i < step ? 'w-1.5 bg-indigo-300' : 'w-1.5 bg-slate-200 dark:bg-slate-600'
+              }`}
+            />
+          ))}
+        </div>
+
+        <h4 className="text-base font-bold text-slate-800 dark:text-white mb-2">
+          {current.title}
+        </h4>
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+          {current.text}
+        </p>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => { onClose(); localStorage.setItem('tour_done', 'true') }}
+            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            Saltar tutorial
+          </button>
+          <div className="flex items-center gap-2">
+            {!isFirst && (
+              <button
+                onClick={() => setStep(s => s - 1)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                <ChevronLeft size={16} className="text-slate-600 dark:text-slate-300" />
+              </button>
+            )}
+            {isLast ? (
+              <button
+                onClick={() => { onClose(); localStorage.setItem('tour_done', 'true') }}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              >
+                ¡Entendido!
+              </button>
+            ) : (
+              <button
+                onClick={() => setStep(s => s + 1)}
+                className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              >
+                Siguiente
+                <ChevronRight size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -246,6 +464,15 @@ export default function ArreglosPage() {
   const [tareas, setTareas] = useState<Tarea[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'todas' | 'pendientes' | 'completadas'>('todas')
+  const [tourActive, setTourActive] = useState(false)
+
+  // Auto-show tutorial on first visit
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('tour_done')) {
+      const timer = setTimeout(() => setTourActive(true), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   // Modals
   const [seccionModal, setSeccionModal] = useState<{ open: boolean; editing?: Seccion }>({ open: false })
@@ -410,7 +637,18 @@ export default function ArreglosPage() {
                 Arreglos de la Escuela
               </h1>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTourActive(true)}
+                className="p-2 rounded-xl bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white/20 transition-colors"
+                title="Ver tutorial"
+              >
+                <HelpCircle size={20} />
+              </button>
+              <div data-tour="theme-toggle">
+                <ThemeToggle />
+              </div>
+            </div>
           </div>
           <p className="text-indigo-200 text-sm mt-1 flex items-center gap-2">
             Listado de tareas de mantenimiento
@@ -421,7 +659,7 @@ export default function ArreglosPage() {
           </p>
 
           {/* Barra de progreso */}
-          <div className="mt-6">
+          <div className="mt-6" data-tour="progress">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-indigo-200">Progreso</span>
               <span className="font-semibold">
@@ -441,7 +679,7 @@ export default function ArreglosPage() {
       <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         {/* ── Filtros + Botón nueva sección ── */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" data-tour="filters">
             {(['todas', 'pendientes', 'completadas'] as const).map(f => (
               <button
                 key={f}
@@ -458,7 +696,7 @@ export default function ArreglosPage() {
               </button>
             ))}
           </div>
-          <button onClick={openNewSeccion} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md">
+          <button data-tour="new-section" onClick={openNewSeccion} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md">
             <Plus size={16} />
             Nueva sección
           </button>
@@ -476,7 +714,7 @@ export default function ArreglosPage() {
             return (
               <div key={sec.id} className="group/sec">
                 {/* Cabecera sección */}
-                <div className="flex items-center justify-between mb-3 px-1">
+                <div className="flex items-center justify-between mb-3 px-1" {...(sec.id === secciones[0]?.id ? { 'data-tour': 'section-header' } : {})}>
                   <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     {getIconByKey(sec.emoji, 18)}
                     <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -513,9 +751,10 @@ export default function ArreglosPage() {
 
                 {/* Tareas */}
                 <div className="space-y-2">
-                  {tareasDeSeccion.map(tarea => (
+                  {tareasDeSeccion.map((tarea, tareaIdx) => (
                     <div
                       key={tarea.id}
+                      {...(sec.id === secciones[0]?.id && tareaIdx === 0 ? { 'data-tour': 'task-item' } : {})}
                       className={`group/task flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border cursor-pointer select-none transition-all duration-200 ${
                         tarea.completado
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
@@ -558,7 +797,10 @@ export default function ArreglosPage() {
                       </div>
 
                       {/* Acciones */}
-                      <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover/task:opacity-100 transition-opacity">
+                      <div
+                        {...(sec.id === secciones[0]?.id && tareaIdx === 0 ? { 'data-tour': 'task-actions' } : {})}
+                        className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover/task:opacity-100 transition-opacity"
+                      >
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditTarea(tarea) }}
                           className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
@@ -602,6 +844,7 @@ export default function ArreglosPage() {
                   {/* Botón agregar tarea inline */}
                   {filtro !== 'completadas' && (
                     <button
+                      {...(sec.id === secciones[0]?.id ? { 'data-tour': 'add-task' } : {})}
                       onClick={() => openNewTarea(sec.id)}
                       className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-500 transition-all text-sm"
                     >
@@ -739,6 +982,9 @@ export default function ArreglosPage() {
           message={confirmDelete.message}
         />
       )}
+
+      {/* ══ Tutorial ══ */}
+      <Tutorial active={tourActive} onClose={() => setTourActive(false)} />
     </div>
   )
 }
