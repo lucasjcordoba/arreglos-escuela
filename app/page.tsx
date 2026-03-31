@@ -7,8 +7,18 @@ import {
   ClipboardList, Monitor, Wrench, Bath, Hammer, BrickWall, Lock,
   Lightbulb, Sparkles, Paintbrush, HardHat, PanelTop, ShowerHead,
   Nut, Briefcase, Package, Container, Plug, GitBranchPlus, Settings,
-  ListChecks, PartyPopper, CircleDot,
+  ListChecks, PartyPopper, CircleDot, Globe,
 } from 'lucide-react'
+
+function InstagramIcon({ size = 14, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  )
+}
 
 let _supabase: SupabaseClient | null = null
 function getSupabase(): SupabaseClient {
@@ -629,9 +639,31 @@ export default function ArreglosPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2">
+        <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col items-center gap-4 pb-6">
           <span className="text-xs text-slate-400 dark:text-slate-500">Desarrollado por</span>
-          <img src="/tecnoaid-logo.png" alt="Tecnoaid - Tech Repair & Digital Solutions" className="h-12 opacity-70 hover:opacity-100 transition-opacity" />
+          <a href="https://tecnoaid.ar" target="_blank" rel="noopener noreferrer">
+            <img src="/tecnoaid-logo.png" alt="Tecnoaid - Tech Repair & Digital Solutions" className="h-14 opacity-70 hover:opacity-100 transition-opacity" />
+          </a>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://tecnoaid.ar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+            >
+              <Globe size={14} />
+              tecnoaid.ar
+            </a>
+            <a
+              href="https://instagram.com/tecno.aid"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-pink-500 dark:hover:text-pink-400 transition-colors"
+            >
+              <InstagramIcon size={14} />
+              @tecno.aid
+            </a>
+          </div>
         </div>
       </main>
 
