@@ -629,8 +629,9 @@ export default function ArreglosPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700 text-center text-xs text-slate-400 dark:text-slate-500">
-          Arreglos de la Escuela — Sincronizado en tiempo real
+        <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2">
+          <span className="text-xs text-slate-400 dark:text-slate-500">Desarrollado por</span>
+          <img src="/tecnoaid-logo.png" alt="Tecnoaid - Tech Repair & Digital Solutions" className="h-12 opacity-70 hover:opacity-100 transition-opacity" />
         </div>
       </main>
 
