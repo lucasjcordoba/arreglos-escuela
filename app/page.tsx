@@ -462,6 +462,7 @@ function FotosPanel({ tareaId, supabase }: { tareaId: number; supabase: Supabase
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
 
   // Fetch fotos count initially, full list when opened
   const [count, setCount] = useState(0)
@@ -581,33 +582,40 @@ function FotosPanel({ tareaId, supabase }: { tareaId: number; supabase: Supabase
                 </div>
               )}
 
-              {/* Upload button */}
-              <label className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-xs ${
-                uploading
-                  ? 'border-indigo-300 text-indigo-400'
-                  : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500'
-              }`}>
-                {uploading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Subiendo...
-                  </>
-                ) : (
-                  <>
+              {/* Upload buttons */}
+              {uploading ? (
+                <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-xs">
+                  <Loader2 size={14} className="animate-spin" />
+                  Subiendo...
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-xs border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500">
+                    <ImageIcon size={14} />
+                    Galería
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleUpload}
+                    />
+                  </label>
+                  <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-xs border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500">
                     <Camera size={14} />
-                    Agregar foto
-                  </>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleUpload}
-                  disabled={uploading}
-                />
-              </label>
+                    Cámara
+                    <input
+                      ref={cameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleUpload}
+                    />
+                  </label>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -673,6 +681,9 @@ export default function ArreglosPage() {
   // Form states
   const [secForm, setSecForm] = useState({ nombre: '', emoji: 'clipboard' })
   const [tareaForm, setTareaForm] = useState({ descripcion: '', ubicacion: '', reportado_por: '' })
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const formFileRef = useRef<HTMLInputElement>(null)
+  const formCameraRef = useRef<HTMLInputElement>(null)
 
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
@@ -741,6 +752,7 @@ export default function ArreglosPage() {
   // ── CRUD Tareas ──
   const openNewTarea = (seccionId: number) => {
     setTareaForm({ descripcion: '', ubicacion: '', reportado_por: '' })
+    setPendingFiles([])
     setTareaModal({ open: true, seccionId })
   }
 
@@ -776,8 +788,26 @@ export default function ArreglosPage() {
         reportado_por: tareaForm.reportado_por.trim(),
         orden: maxOrden + 1,
       }).select().single()
-      if (data) setTareas(prev => [...prev, data])
+      if (data) {
+        setTareas(prev => [...prev, data])
+        // Upload pending photos
+        if (pendingFiles.length > 0) {
+          for (const file of pendingFiles) {
+            const ext = file.name.split('.').pop() || 'jpg'
+            const path = `tarea-${data.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+            const { error: uploadError } = await supabase.storage.from('fotos').upload(path, file)
+            if (uploadError) { console.error(uploadError); continue }
+            const { data: urlData } = supabase.storage.from('fotos').getPublicUrl(path)
+            await supabase.from('tarea_fotos').insert({
+              tarea_id: data.id,
+              url: urlData.publicUrl,
+              nombre: file.name,
+            })
+          }
+        }
+      }
     }
+    setPendingFiles([])
     setTareaModal({ open: false })
   }
 
@@ -1156,6 +1186,70 @@ export default function ArreglosPage() {
             onChange={e => setTareaForm(f => ({ ...f, reportado_por: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && saveTarea()}
           />
+          {/* Photo attachments (only for new tasks) */}
+          {!tareaModal.editing && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => formFileRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors text-xs"
+                >
+                  <ImageIcon size={14} />
+                  Galería
+                </button>
+                <button
+                  type="button"
+                  onClick={() => formCameraRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors text-xs"
+                >
+                  <Camera size={14} />
+                  Cámara
+                </button>
+                <input
+                  ref={formFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={e => {
+                    if (e.target.files) setPendingFiles(prev => [...prev, ...Array.from(e.target.files!)])
+                    e.target.value = ''
+                  }}
+                />
+                <input
+                  ref={formCameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    if (e.target.files) setPendingFiles(prev => [...prev, ...Array.from(e.target.files!)])
+                    e.target.value = ''
+                  }}
+                />
+              </div>
+              {pendingFiles.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {pendingFiles.map((file, i) => (
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-700">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => setPendingFiles(prev => prev.filter((_, j) => j !== i))}
+                        className="absolute top-1 right-1 p-0.5 rounded-full bg-black/50 text-white hover:bg-red-500 transition-colors"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-3 justify-end pt-2">
             <button onClick={() => setTareaModal({ open: false })} className={btnSecondary}>Cancelar</button>
             <button onClick={saveTarea} disabled={!tareaForm.descripcion.trim()} className={btnPrimary}>
