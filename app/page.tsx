@@ -572,7 +572,7 @@ function FotosPanel({ tareaId, supabase }: { tareaId: number; supabase: Supabase
                       />
                       <button
                         onClick={() => handleDelete(foto)}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover/foto:opacity-100 sm:opacity-0 sm:group-hover/foto:opacity-100 transition-opacity hover:bg-red-500"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white sm:opacity-0 sm:group-hover/foto:opacity-100 transition-opacity hover:bg-red-500"
                         title="Eliminar foto"
                       >
                         <X size={12} />
