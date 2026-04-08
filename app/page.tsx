@@ -8,7 +8,7 @@ import {
   Lightbulb, Sparkles, Paintbrush, HardHat, PanelTop, ShowerHead,
   Nut, Briefcase, Package, Container, Plug, GitBranchPlus, Settings,
   ListChecks, PartyPopper, CircleDot, Globe, HelpCircle,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Camera, ChevronDown, ImageIcon, Loader2,
 } from 'lucide-react'
 
 function InstagramIcon({ size = 14, className = '' }: { size?: number; className?: string }) {
@@ -250,6 +250,14 @@ function getSupabase(): SupabaseClient {
 }
 
 // ── Types ──
+interface Foto {
+  id: number
+  tarea_id: number
+  url: string
+  nombre: string
+  created_at: string
+}
+
 interface Seccion {
   id: number
   nombre: string
@@ -443,6 +451,189 @@ function ConfirmDialog({ open, onClose, onConfirm, message }: {
         </button>
       </div>
     </Modal>
+  )
+}
+
+// ── Fotos Panel (collapsible per task) ──
+function FotosPanel({ tareaId, supabase }: { tareaId: number; supabase: SupabaseClient }) {
+  const [open, setOpen] = useState(false)
+  const [fotos, setFotos] = useState<Foto[]>([])
+  const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  // Fetch fotos count initially, full list when opened
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    supabase.from('tarea_fotos').select('id', { count: 'exact', head: true }).eq('tarea_id', tareaId)
+      .then(({ count: c }) => { if (c !== null) setCount(c) })
+  }, [tareaId, supabase])
+
+  const fetchFotos = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase.from('tarea_fotos').select('*').eq('tarea_id', tareaId).order('created_at', { ascending: false })
+    if (data) { setFotos(data); setCount(data.length) }
+    setLoading(false)
+  }, [tareaId, supabase])
+
+  useEffect(() => {
+    if (open) fetchFotos()
+  }, [open, fetchFotos])
+
+  // Realtime for this task's photos
+  useEffect(() => {
+    const channel = supabase
+      .channel(`fotos-${tareaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tarea_fotos', filter: `tarea_id=eq.${tareaId}` }, () => {
+        if (open) fetchFotos()
+        else {
+          supabase.from('tarea_fotos').select('id', { count: 'exact', head: true }).eq('tarea_id', tareaId)
+            .then(({ count: c }) => { if (c !== null) setCount(c) })
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [tareaId, supabase, open, fetchFotos])
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    setUploading(true)
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `tarea-${tareaId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+      const { error: uploadError } = await supabase.storage.from('fotos').upload(path, file)
+      if (uploadError) { console.error(uploadError); continue }
+
+      const { data: urlData } = supabase.storage.from('fotos').getPublicUrl(path)
+
+      await supabase.from('tarea_fotos').insert({
+        tarea_id: tareaId,
+        url: urlData.publicUrl,
+        nombre: file.name,
+      })
+    }
+
+    setUploading(false)
+    fetchFotos()
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleDelete = async (foto: Foto) => {
+    // Extract path from URL
+    const urlParts = foto.url.split('/fotos/')
+    const path = urlParts[urlParts.length - 1]
+    await supabase.storage.from('fotos').remove([path])
+    await supabase.from('tarea_fotos').delete().eq('id', foto.id)
+    setFotos(prev => prev.filter(f => f.id !== foto.id))
+    setCount(prev => prev - 1)
+  }
+
+  return (
+    <div className="w-full" onClick={e => e.stopPropagation()}>
+      {/* Toggle button */}
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 text-xs transition-colors mt-2 ${
+          count > 0
+            ? 'text-indigo-500 dark:text-indigo-400 hover:text-indigo-600'
+            : 'text-slate-400 dark:text-slate-500 hover:text-slate-500'
+        }`}
+      >
+        <Camera size={13} />
+        {count > 0 ? `${count} foto${count !== 1 ? 's' : ''}` : 'Fotos'}
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Collapsible panel */}
+      {open && (
+        <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 size={18} className="animate-spin text-slate-400" />
+            </div>
+          ) : (
+            <>
+              {/* Photo grid */}
+              {fotos.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+                  {fotos.map(foto => (
+                    <div key={foto.id} className="group/foto relative aspect-square rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-700">
+                      <img
+                        src={foto.url}
+                        alt={foto.nombre}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setPreviewUrl(foto.url)}
+                      />
+                      <button
+                        onClick={() => handleDelete(foto)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover/foto:opacity-100 sm:opacity-0 sm:group-hover/foto:opacity-100 transition-opacity hover:bg-red-500"
+                        title="Eliminar foto"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload button */}
+              <label className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors text-xs ${
+                uploading
+                  ? 'border-indigo-300 text-indigo-400'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-indigo-300 hover:text-indigo-500'
+              }`}>
+                {uploading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Camera size={14} />
+                    Agregar foto
+                  </>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+              </label>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Fullscreen preview */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            onClick={() => setPreviewUrl(null)}
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -794,6 +985,7 @@ export default function ArreglosPage() {
                             )}
                           </div>
                         )}
+                        <FotosPanel tareaId={tarea.id} supabase={supabase} />
                       </div>
 
                       {/* Acciones */}
